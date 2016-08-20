@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "PracticalMachineLearning"
 author: "DhumeRajesh"
 date: "August 19, 2016"
 output: html_document
@@ -15,8 +15,59 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+```
+install.packages("caret")
+install.packages("rpart")
+library(caret)
+library(rpart)
+install.packages("rpart.plot")
+library(rpart.plot)
+install.packages("RColorBrewer")
+library(RColorBrewer)
+install.packages("Rattle")
+library(rattle)
+install.packages("randomForest")
+library(randomForest)
+pmlTrain <- read.csv("pml-training.csv",header=T,na.strings=c("NA","#DIV/0!"))
+pmlTest <- read.csv("pmltesting.csv",header=T,na.strings = c("NA","#DIV/0!"))
+noNApm1Train <- pmlTrain[,apply(pmlTrain,2,function(x)!any(is.na(x)))]
+dim(noNApm1Train)
+cleanpm1Train <- noNApm1Train[,-c(1:8)]
+dim(cleanpm1Train)
+cleanpm1Test <- pmlTest[,names(cleanpm1Train[,-52])]
+dim(cleanpm1Test)
+library(caret)
+inTrain <- createDataPartition(y=cleanpm1Train$classe,p=0.75,list=F)
+training <- cleanpm1Train[inTrain,]
+test <- cleanpm1Train[-inTrain,]
+dim(training)
+dim(test)
+set.seed(13333)
+fitControl2 <- trainControl(method="cv",number=5,allowParallel = T,verbose=T)
+rffit <- train(classe~.,data = training,method="rf",trControl=fitControl2,verbose=F)
+predrf <- predict(rffit,newdata=test)
+confusionMatrix(predrf,test$classe)
+pred20 <- predict(rffit,newdata = cleanpm1Test)
+pred20
+fitControl2 <- trainControl(method="cv",number=5,allowParallel = T,verbose=T)
+gmbfit <- train(classe ~.,data = training,method="gbm",trControl=fitControl2,verbose=F)
+class(gmbfit)
+predgmb <- predict(gmbfit,newdata=test)
+confusionMatrix(predgmb,test$classe)
+predtrain <- predict(gmbfit,newdata=training)
+confusionMatrix(predtrain,training$classe)
+predtrain <- predict(gmbfit,newdata=training)
+confusionMatrix(predtrain,training$classe)
+
+getwd()
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(pred20)
 ```
 
 ## Including Plots
@@ -28,12 +79,4 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-getwd()
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("problem_id_",i,".txt")
-    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-  }
-}
-pml_write_files(pred20)
+
