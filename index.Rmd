@@ -4,53 +4,62 @@ author: "DhumeRajesh"
 date: "August 19, 2016"
 output: html_document
 ---
+The data for this project come was obteined from http://groupware.les.inf.puc-rio.br/har. Two data set were available a training set and a test set for which 20 individuals without any classification for the class of exercise was available.This report aims to use machine learning algoritmhs to predict the class of exercise the individuals was performing by using meaurements available from devices such as Jawbone Up, Nike FuelBand, and Fitbit.
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```
-install.packages("caret")
-install.packages("rpart")
-library(caret)
-library(rpart)
-install.packages("rpart.plot")
-library(rpart.plot)
-install.packages("RColorBrewer")
-library(RColorBrewer)
-install.packages("Rattle")
-library(rattle)
-install.packages("randomForest")
-library(randomForest)
-pmlTrain <- read.csv("pml-training.csv",header=T,na.strings=c("NA","#DIV/0!"))
+#DataLoading
+```{r include=FALSE}
+pmlTrain <- read.csv("pmltraining.csv",header=T,na.strings=c("NA","#DIV/0!"))
 pmlTest <- read.csv("pmltesting.csv",header=T,na.strings = c("NA","#DIV/0!"))
+```
+Initially the training data set has 19622 observations of 160 variables. The validation data set has 20 observations of 160 variables
+
+## NA exclusion for all available variables
+
+```{r }
 noNApm1Train <- pmlTrain[,apply(pmlTrain,2,function(x)!any(is.na(x)))]
 dim(noNApm1Train)
 cleanpm1Train <- noNApm1Train[,-c(1:8)]
 dim(cleanpm1Train)
 cleanpm1Test <- pmlTest[,names(cleanpm1Train[,-52])]
 dim(cleanpm1Test)
+```
+#Data Partition & Prediction Process
+The training data is partitioned into train & test sets in the ratio 75:25.
+```{r echo=FALSE}
 library(caret)
 inTrain <- createDataPartition(y=cleanpm1Train$classe,p=0.75,list=F)
 training <- cleanpm1Train[inTrain,]
 test <- cleanpm1Train[-inTrain,]
 dim(training)
 dim(test)
+```
+```{r echo=FALSE}
+library(caret)
 set.seed(13333)
 fitControl2 <- trainControl(method="cv",number=5,allowParallel = T,verbose=T)
 rffit <- train(classe~.,data = training,method="rf",trControl=fitControl2,verbose=F)
+rffit
+```
+Random forest trees were generated for the training dataset using cross-validation. Then the generated algorithm was examnined under the partitioned training set to examine the accuracy and estimated error of prediction. By using 51 predictors for five classes using cross-validation at a 5-fold an accuracy of 99.2% with a 95% CI [0.989-0.994] was achieved accompanied by a Kappa value of 0.99.
+```{r}
 predrf <- predict(rffit,newdata=test)
 confusionMatrix(predrf,test$classe)
+
+```
+The predictions were then made on the give Validation set for Random Forest model which had an accuracy of 99.2% in training set.
+```{r}
 pred20 <- predict(rffit,newdata = cleanpm1Test)
 pred20
+```
+#Gradient Boosing Algorithm
+
+```{r include==FALSE}
 fitControl2 <- trainControl(method="cv",number=5,allowParallel = T,verbose=T)
 gmbfit <- train(classe ~.,data = training,method="gbm",trControl=fitControl2,verbose=F)
+gmbfit
+```
+A boosting algorithm was also run to confirm and be able to compare predictions.The boosting approach presented less accuracy (96%). However, when the predictions for the 20 test cases were compared match was same for both the algorimths.
+```{r}
 class(gmbfit)
 predgmb <- predict(gmbfit,newdata=test)
 confusionMatrix(predgmb,test$classe)
@@ -58,7 +67,9 @@ predtrain <- predict(gmbfit,newdata=training)
 confusionMatrix(predtrain,training$classe)
 predtrain <- predict(gmbfit,newdata=training)
 confusionMatrix(predtrain,training$classe)
-
+```
+Once, the predictions were obtained for the 20 validation test cases provided, the below shown script was used to obtain single text files that is uploaded to the courses web site to comply with the submission assigment. 20 out of 20 hits also confirmed the accuracy of the obtained models.
+```{r }
 getwd()
 pml_write_files = function(x){
   n = length(x)
@@ -68,15 +79,7 @@ pml_write_files = function(x){
   }
 }
 pml_write_files(pred20)
+
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
